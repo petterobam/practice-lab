@@ -1,5 +1,7 @@
 ## 背景
 
+实践参考：https://github.com/phodal/ideabook
+
 我有一个2G左右的网站访问日志。我想看看访问网站的人都来自哪里，于是我想开始想办法来分析这日志，这是一个Web生成的界面，通过Elastic.js向搜索引擎查询数据，将再这些数据渲染到地图上。
 
 ![Demo](access-map.png)
