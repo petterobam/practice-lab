@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Access-Map</title>
+    <script src="js/bower_components/jquery/dist/jquery.js"></script>
+    <script src="js/bower_components/elasticsearch/elasticsearch.jquery.js"></script>
+    <script src="js/bower_components/ammap/dist/ammap/ammap.js" type="text/javascript"></script>
+    <script src="js/bower_components/ammap/dist/ammap/maps/js/worldLow.js" type="text/javascript"></script>
+    <script src="js/bower_components/ammap/dist/ammap/themes/black.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="mapdiv" style="width: 100%; background-color:#eeeeee; height: 500px;"></div>
+
+<script type="text/javascript">
+var client = new $.es.Client({
+    hosts: 'http://localhost:9200'
+});
+
+// 创建ElasticSearch搜索条件
+var query = {
+    index: 'nginx_access_city',
+    type: 'log_city_sum',
+    size: 200,
+    body: {}
+};
+
+// 获取到country.json后生成数据
+$(document).ready(function () {
+    generate_info();
+});
+
+// 根据数据中的国家名，来计算不同国家的访问量大小。
+var generate_info = function(){
+    debugger;
+    var mapDatas = [];
+    client.search(query).then(function (results) {
+        $.each(results.hits.hits, function(index, item){
+            source = item["_source"];
+            var mapData;
+            if (null != source) {
+                mapData = {
+                    code: source.city,
+                    name: source.country,
+                    longitude:source.longitude,
+                    latitude:source.latitude,
+                    value: source.counts,
+                    color: "#eea638"
+                };
+            }
+            if(mapData !== undefined){
+                mapDatas.push(mapData);
+            }
+        });
+        create_map(mapDatas);
+    });
+};
+
+var create_map = function(mapData) {
+    var map;
+    var minBulletSize = 3;
+    var maxBulletSize = 70;
+    var min = Infinity;
+    var max = -Infinity;
+
+    AmCharts.theme = AmCharts.themes.black;
+
+    for (var i = 0; i < mapData.length; i++) {
+        var value = mapData[i].value;
+        if (value < min) {
+            min = value;
+        }
+        if (value > max) {
+            max = value;
+        }
+    }
+
+    map = new AmCharts.AmMap();
+    map.pathToImages = "js/bower_components/ammap/dist/ammap/images/";
+
+    map.areasSettings = {
+        unlistedAreasColor: "#FFFFFF",
+        unlistedAreasAlpha: 0.1
+    };
+
+    map.imagesSettings = {
+        balloonText: "<span style='font-size:14px;'><b>[[title]]</b>: [[value]]</span>",
+        alpha: 0.6
+    };
+
+    var dataProvider = {
+        mapVar: AmCharts.maps.worldLow,
+        images: []
+    };
+
+    var maxSquare = maxBulletSize * maxBulletSize * 2 * Math.PI;
+    var minSquare = minBulletSize * minBulletSize * 2 * Math.PI;
+
+    for (var i = 0; i < mapData.length; i++) {
+        var dataItem = mapData[i];
+        var value = dataItem.value;
+        // calculate size of a bubble
+        var square = (value - min) / (max - min) * (maxSquare - minSquare) + minSquare;
+        if (square < minSquare) {
+            square = minSquare;
+        }
+        var size = Math.sqrt(square / (Math.PI * 2));
+        var id = dataItem.code;
+
+        dataProvider.images.push({
+            type: "circle",
+            width: size,
+            height: size,
+            color: dataItem.color,
+            longitude: dataItem.longitude,
+            latitude: dataItem.latitude,
+            title: dataItem.name,
+            value: value
+        });
+    }
+
+    map.dataProvider = dataProvider;
+
+    map.write("mapdiv");
+};    
+</script>
+</body>
+</html>

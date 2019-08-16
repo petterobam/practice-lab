@@ -1,0 +1,12 @@
+**/__pycache__/**
+.idea/
+.vscode/
+plugin/*
+.DS_Store
+**/data/**
+**/output/**
+*.class
+*.tar.gz
+**/bower_components/**
+bower.json
+**/database/**
